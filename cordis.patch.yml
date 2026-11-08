@@ -1,0 +1,4 @@
+# dsh-tool-ruyijs bundle patch: mount the three ruyijs tools.
+- insert:
+    - id: tool-ruyijs
+      name: 'dsh-tool-ruyijs'

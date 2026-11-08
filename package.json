@@ -1,0 +1,55 @@
+{
+  "name": "dsh-tool-ruyijs",
+  "version": "0.2.0",
+  "description": "DSH 插件：用 ruyijs（真 Firefox 引擎 SpiderMonkey + Necko，无窗口无渲染）跑站点自己的 JavaScript —— 过挑战、取签名、看请求链，截图与交互交给 chromium。Run a site's own JS in a real Firefox engine; hand screenshots to chromium.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhuchongba-01/dsh-tool-ruyijs.git"
+  },
+  "homepage": "https://github.com/zhuchongba-01/dsh-tool-ruyijs#readme",
+  "bugs": {
+    "url": "https://github.com/zhuchongba-01/dsh-tool-ruyijs/issues"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "dsh-plugins",
+    "deepseek-harness",
+    "ruyijs",
+    "spidermonkey",
+    "necko",
+    "firefox-engine",
+    "anti-bot",
+    "tls-fingerprint",
+    "js-rendering",
+    "web-scraping"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dshTarget": "0.2.1-rc.5"
+}
