@@ -51,7 +51,7 @@
 ## 生命周期
 
 - **按需拉起**：第一次调用才 spawn 一个 Python daemon，进程内持有一个 ruyijs `Context`。
-- **并发上限**：同时最多 6 个上下文，超出时先杀最久没被调用的那个（`RUYIJS_MAX_CONTEXTS` 可改）。一个上下文就是三个进程约 120MB，不设限等于把机器交给运气。
+- **并发上限**：同时最多 4 个上下文，超出时先杀最久没被调用的那个（`RUYIJS_MAX_CONTEXTS` 可改）。一个上下文就是三个进程约 120MB，不设限等于把机器交给运气。
 - **按 origin 复用**：key 是 `会话ID|origin`。同一 origin 的后续调用接回同一个世界，`globalThis` 上的变量和已加载的页面都还在。
 - **无 url 调用**：接回本会话上一次用过的 origin。
 - **回收**：空闲 `idleSeconds`、`ruyijs_close`、工具超时、宿主退出，四种都会杀进程（含它的子进程）。
@@ -154,5 +154,6 @@ await b.close();
 - 插件 0.2.1
 - ruyijs 0.3.6（PyPI）
 - chromium / headless shell 149.0.7827.55（playwright rev 1228）
+
 
 
