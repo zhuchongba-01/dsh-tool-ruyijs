@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "ruyijs tool",
-    "description": "Run a site's own JS in a real Firefox engine: pass bot checks, capture signatures, read the request chain.",
+    "description": "Run a site's own JS in a real Firefox engine.",
     "detail": "detail.en.md"
   }
 }

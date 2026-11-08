@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "ruyijs 工具",
-    "description": "在真 Firefox 引擎里跑站点自己的 JS：过挑战、取签名、看请求链。",
+    "description": "在真 Firefox 引擎里跑站点自己的 JS。",
     "detail": "detail.zh.md"
   }
 }
