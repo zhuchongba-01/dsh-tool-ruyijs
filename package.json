@@ -1,6 +1,6 @@
 {
   "name": "dsh-tool-ruyijs",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "DSH 插件：用 ruyijs（真 Firefox 引擎 SpiderMonkey + Necko，无窗口无渲染）跑站点自己的 JavaScript —— 过挑战、取签名、看请求链，截图与交互交给 chromium。Run a site's own JS in a real Firefox engine; hand screenshots to chromium.",
   "license": "MIT",
   "repository": {
@@ -57,3 +57,4 @@
   },
   "dshTarget": "0.2.1-rc.5"
 }
+

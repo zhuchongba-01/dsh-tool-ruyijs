@@ -174,6 +174,9 @@ def handle(msg):
     if op == "logs":
         ctx = ensure(msg)
         return {"ok": True, "net": plain(ctx.net_log()), "console": plain(ctx.console_log())}
+    if op == "cookies":
+        ctx = ensure(msg)
+        return {"ok": True, "cookies": plain(ctx.export_cookies())}
     if op == "close":
         global _ctx
         if _ctx is not None:

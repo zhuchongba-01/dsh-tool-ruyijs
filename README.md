@@ -1,6 +1,6 @@
 # dsh-tool-ruyijs
 
-给 dsh 的三个工具，用 **ruyijs**（真 Firefox 引擎：SpiderMonkey + Necko，无窗口无渲染）跑站点自己的 JavaScript。
+给 dsh 的四个工具，用 **ruyijs**（真 Firefox 引擎：SpiderMonkey + Necko，无窗口无渲染）跑站点自己的 JavaScript。
 截图走 chromium headless shell，配方见下。
 
 - 插件本体：装成 profile 依赖后位于 `<profile>\node_modules\dsh-tool-ruyijs`
@@ -22,12 +22,13 @@
 
 想跟着本机改代码就改用本地链接：先把仓库 clone 到 `%USERPROFILE%\.dsh\plugins\dsh-tool-ruyijs`，再把第 2 步换成 `"dsh-tool-ruyijs": "link:C:/Users/<用户名>/.dsh/plugins/dsh-tool-ruyijs"`，第 3、4 步不变。
 
-## 三个工具
+## 四个工具
 
 | 工具 | 用途 |
 |---|---|
 | `ruyijs_run` | 打开页面 / 跑 JS / 取签名 / 过挑战，返回结果 + console + net 记录 |
 | `ruyijs_net` | 读当前上下文的请求日志与 console（不触发新请求） |
+| `ruyijs_handoff` | 把此上下文的身份交给真浏览器：全量 cookie（含 HttpOnly）、UA、localStorage，外带一段可直接跑的 Playwright |
 | `ruyijs_close` | 关掉某个 origin 的上下文，或不带 url 全关 |
 
 ### `ruyijs_run` 参数
@@ -50,6 +51,7 @@
 ## 生命周期
 
 - **按需拉起**：第一次调用才 spawn 一个 Python daemon，进程内持有一个 ruyijs `Context`。
+- **并发上限**：同时最多 6 个上下文，超出时先杀最久没被调用的那个（`RUYIJS_MAX_CONTEXTS` 可改）。一个上下文就是三个进程约 120MB，不设限等于把机器交给运气。
 - **按 origin 复用**：key 是 `会话ID|origin`。同一 origin 的后续调用接回同一个世界，`globalThis` 上的变量和已加载的页面都还在。
 - **无 url 调用**：接回本会话上一次用过的 origin。
 - **回收**：空闲 `idleSeconds`、`ruyijs_close`、工具超时、宿主退出，四种都会杀进程（含它的子进程）。
@@ -102,31 +104,28 @@ await b.close();
 
 1. 静态页 / 接口 → `web_fetch`，不启浏览器
 2. JS 渲染 / 挑战 / 签名 / TLS 指纹 → 本插件
-3. 截图 / 点击 / 版面 / 下载 → chromium（截图用 headless shell，交互走 playwright）
-4. 既要过检测又要交互 → playwright firefox（`playwright install firefox`）
+3. 过完门要交给浏览器 → `ruyijs_handoff` 拿身份，别手拼 cookie
+4. 截图 / 点击 / 版面 / 下载 → chromium（截图用 headless shell，交互走 playwright）
+5. 既要过检测又要交互 → 上面 2+3+4 串起来；全程同一指纹就留在 `ruyijs_run`
 
 **ruyijs 不做点击流**：没有排版引擎，元素位置和可视区判断不可信。
 
 ## 与浏览器的接力
 
-它不跟浏览器抢活，位置在浏览器门口：让站点自己的脚本跑完、签出 cookie / token、观察完整请求链，再把凭证交给浏览器去看版式、截、点。反方向同样成立——浏览器里看中的地址和元素，回这里按同一套头取正文。
+它不跟浏览器抢活，位置在浏览器门口：让站点自己的脚本跑完、签出 cookie / token、观察完整请求链，再把身份交给浏览器去看版式、截、点。反方向同样成立——浏览器里看中的地址和元素，回这里按同一套头取正文。
 
-```js
-// 1) ruyijs 先过门，把凭证取出来
-// ruyijs_run: {url: TARGET}
-// ruyijs_run: js = "JSON.stringify({c:document.cookie, t:localStorage.TOKEN})"
+交接不用手拼，`ruyijs_handoff` 一次给全：引擎里那份**含 HttpOnly** 的 cookie jar（`export_cookies`，页面自己读 `document.cookie` 是拿不到 HttpOnly 的）、当前 UA、页面的 localStorage，外加一段装好这三样再去截图的 Playwright 脚本。
+
 ```
-```js
-// 2) 凭证交给浏览器，带真身去截
-const { chromium } = require("C:/Users/zcb/AppData/Roaming/npm/node_modules/playwright");
-const b = await chromium.launch();
-const ctx = await b.newContext({ userAgent: UA_FROM_RUYIJS });
-await ctx.addCookies(COOKIE_LIST);
-await ctx.addInitScript(`localStorage.TOKEN=${JSON.stringify(TOKEN)}`);
-const p = await ctx.newPage();
-await p.goto(TARGET);
-await p.screenshot({ path: "runs/shot.png" });
+1) ruyijs_run {url: TARGET}                       // 过门
+2) ruyijs_run   执行站点需要的那段签名 / 挑战
+3) ruyijs_handoff {url: TARGET}                   // 拿 cookies / userAgent / localStorage / script
+4) 把返回的 script 落成文件跑起来                  // 带同一副身份截图、点击
 ```
+
+`script` 里已经写好了 `addCookies`、`addInitScript`（localStorage 必须在 `goto` 之前注入，晚写就是空的）和 screenshot，改个路径就能用。
+
+一个真限制：**指纹只在各自那一跳有效**。这半程是 Firefox 的 TLS 特征，交给 Chromium 之后那半程就是 Chrome 的，站点若在会话中途二次比对会露。要求全程同一指纹的场合，别换，留在 `ruyijs_run` 里把活干完。
 
 `ruyijs_net` 读出的请求顺序、头、参数可以直接当协议规格，交给浏览器或 `web_fetch` 复现。
 
@@ -152,7 +151,8 @@ await p.screenshot({ path: "runs/shot.png" });
 
 ## 版本
 
-- 插件 0.2.0
+- 插件 0.2.1
 - ruyijs 0.3.6（PyPI）
 - chromium / headless shell 149.0.7827.55（playwright rev 1228）
+
 
