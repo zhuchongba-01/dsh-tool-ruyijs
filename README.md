@@ -55,13 +55,13 @@
 - **回收**：空闲 `idleSeconds`、`ruyijs_close`、工具超时、宿主退出，四种都会杀进程（含它的子进程）。
 - **回收后再调**：明确返回 `no live ruyijs context ...`，**不会**静默开一个空白页。
 
-一个上下文实占 4 个进程（runner + js.exe + 2 个 vendored python worker，约 155MB 常驻），这是 ruyijs 的正常结构，不是泄漏。
+一个上下文实占 3 个进程（runner + js.exe + 1 个 vendored python worker，约 120MB 常驻），这是 ruyijs 的正常结构，不是泄漏。关闭后归零。
 
 ## 输出截断与清理
 
 - 返回内容超过 `maxBytes`：`text` 与 `value` 都被截断，全文写到 `runs/<时间戳>-value.txt`，render 里直接给路径。
 - 更早的一道闸在 runner 里：单条回复超过 24MB 就先在那边截（Node 侧行缓冲超过 32MB 会整段丢弃，必须挡在前面），这时 `truncated` 为 `true` 但 `spilledTo` 为空——落盘的是已截的部分。
-- 比这更早的是 ruyijs 自己的值遍历预算：实测 1MB 字符串能整段回来，5MB 起报 `Host value traversal budget exceeded`。要整段大正文就分片取（按 `slice` 分段、或先写进 `globalThis` 再按块读），别指望一次扛。
+- 比这更早的是 ruyijs 自己的值遍历预算：实测 1 MiB 的字符串能整段回来，1.5 MiB 就报 `Host value traversal budget exceeded`，界卡在 1 MiB 出头，跟版本无关（0.1.9 与 0.3.6 同）。要整段大正文就分片取（按 `slice` 分段、或先写进 `globalThis` 再按块读），别指望一次扛。
 - `runs/` 自动清理：每次落盘后和每次宿主启动时扫一遍——先删超过 **7 天**的，再按最旧优先删到总量 **200MB** 以内。删不掉（被占用）就跳过，不影响调用。
 - `%TEMP%` 下其他工具的遗留目录不由插件处理。人工清垃圾时顺带看一眼 `%TEMP%`，这几类通常是死的：`wrs-chrome-*`、`edge-keeper-clean*`、`cr-*`、`playwright_chromiumdev_profile-*`、`playwright-artifacts-*`。
 
@@ -153,6 +153,6 @@ await p.screenshot({ path: "runs/shot.png" });
 ## 版本
 
 - 插件 0.2.0
-- ruyijs 0.1.9（PyPI）
+- ruyijs 0.3.6（PyPI）
 - chromium / headless shell 149.0.7827.55（playwright rev 1228）
 

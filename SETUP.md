@@ -43,8 +43,10 @@ node --version                                  # 18+
 ## 1. 装引擎包
 
 ```powershell
-python -m pip install ruyijs
+python -m pip install --upgrade ruyijs
 ```
+
+版本别停在旧包上：0.3.6 起修了进行中的 fetch 被 abort 时把 `js.exe` 打崩（Windows 上 0xC0000005），带 Kasada 之类会中止挂起请求的登录页以前直接崩。装完顺手 `python -m pip show ruyijs` 看一眼版本。
 
 验收：
 
@@ -54,7 +56,7 @@ python -c "import ruyijs, sys; print('ok', ruyijs.__file__, sys.executable)"
 
 打印 `ok` 即过。多个解释器共存时，把可用那个的绝对路径记下来，之后用 `RUYIJS_PY` 钉住。
 
-失败分支：pip 报找不到包 → 确认 Python 是 3.10+ 且 `pip --version` 指向同一解释器；内网环境按 `PIP_INDEX_URL` 配镜像。ruyijs 自带 101MB 运行时（`site-packages\ruyijs\_runtime\dist\js.exe`），装完必须存在：
+失败分支：pip 报找不到包 → 确认 Python 是 3.10+ 且 `pip --version` 指向同一解释器；内网环境按 `PIP_INDEX_URL` 配镜像。ruyijs 自带约 47MB 运行时（`site-packages\ruyijs\_runtime\dist\js.exe`），装完必须存在：
 
 ```powershell
 Test-Path "<site-packages>\ruyijs\_runtime\dist\js.exe"   # 必须 True
