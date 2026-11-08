@@ -60,6 +60,8 @@
 ## 输出截断与清理
 
 - 返回内容超过 `maxBytes`：`text` 与 `value` 都被截断，全文写到 `runs/<时间戳>-value.txt`，render 里直接给路径。
+- 更早的一道闸在 runner 里：单条回复超过 24MB 就先在那边截（Node 侧行缓冲超过 32MB 会整段丢弃，必须挡在前面），这时 `truncated` 为 `true` 但 `spilledTo` 为空——落盘的是已截的部分。
+- 比这更早的是 ruyijs 自己的值遍历预算：实测 1MB 字符串能整段回来，5MB 起报 `Host value traversal budget exceeded`。要整段大正文就分片取（按 `slice` 分段、或先写进 `globalThis` 再按块读），别指望一次扛。
 - `runs/` 自动清理：每次落盘后和每次宿主启动时扫一遍——先删超过 **7 天**的，再按最旧优先删到总量 **200MB** 以内。删不掉（被占用）就跳过，不影响调用。
 - `%TEMP%` 下其他工具的遗留目录不由插件处理。人工清垃圾时顺带看一眼 `%TEMP%`，这几类通常是死的：`wrs-chrome-*`、`edge-keeper-clean*`、`cr-*`、`playwright_chromiumdev_profile-*`、`playwright-artifacts-*`。
 
@@ -135,7 +137,8 @@ await p.screenshot({ path: "runs/shot.png" });
 | `no Python with the ruyijs package` | 装包：`python -m pip install ruyijs`；或设 `RUYIJS_PY` |
 | `no live ruyijs context ...` | 上下文被回收，重新带 `url` |
 | `navigation produced an empty document (2 attempts)` | 目标没有解析出内容，可能被拦或需 `load_page` 喂 HTML |
-| `ruyijs op timed out after N ms` | 页面卡住或脚本死循环；进程已被杀，重调即可 |
+| `Host value traversal budget exceeded` | 返回值太大（5MB 级），引擎带不回来；分片取 |
+| `ruyijs op timed out after N ms` | 页面卡住或脚本死循环。上下文先留 15 秒宽限等那笔迟到的回复——期间别的调用还能接回同一个世界；宽限过了仍无回应才杀上下文，重调即可 |
 | 插件加载报找不到 `@deepseek-ai/dsh-tools` | 设 `DSH_APP_DIR` 指向 dsh 安装根，或重建插件内 junction |
 | 截图 0 字节 | 别用完整 chrome.exe，改用 headless shell（配方见上） |
 
@@ -149,7 +152,7 @@ await p.screenshot({ path: "runs/shot.png" });
 
 ## 版本
 
-- 插件 0.1.0
+- 插件 0.2.0
 - ruyijs 0.1.9（PyPI）
 - chromium / headless shell 149.0.7827.55（playwright rev 1228）
 

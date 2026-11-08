@@ -11,9 +11,55 @@ from ruyijs import Context, JSError
 
 _ctx = None
 
+# The Node side resets its line buffer above 32MB, which silently desyncs the
+# stream. Stay well under it: an oversized reply is shrunk here, where the value
+# is still structured, instead of letting a huge eval result tear the protocol.
+LINE_BUDGET_BYTES = 24 * 1024 * 1024
+CUT_MARK = "\n...[cut at the runner line budget]"
+
+
+def cut_text(text, limit):
+    raw = text.encode("utf-8")
+    if len(raw) <= limit:
+        return text
+    return raw[:limit].decode("utf-8", "ignore") + CUT_MARK
+
+
+def shrink(obj):
+    """Last-resort projection, so a single reply never exceeds the line budget."""
+    fit = dict(obj)
+    value = fit.get("value")
+    if isinstance(value, str):
+        fit["value"] = cut_text(value, LINE_BUDGET_BYTES // 2)
+        fit["cut"] = True
+    elif value is not None:
+        fit["value"] = cut_text(
+            json.dumps(value, ensure_ascii=False), LINE_BUDGET_BYTES // 2
+        )
+        fit["cut"] = True
+    for field in ("net", "console"):
+        if isinstance(fit.get(field), list):
+            fit[field] = fit[field][-20:]
+    text = json.dumps(fit, ensure_ascii=False)
+    if len(text.encode("utf-8")) > LINE_BUDGET_BYTES:
+        text = json.dumps(
+            {
+                "ok": fit.get("ok", True),
+                "value": None,
+                "cut": True,
+                "error": fit.get("error"),
+                "text": cut_text(text, LINE_BUDGET_BYTES - 1024),
+            },
+            ensure_ascii=False,
+        )
+    return text
+
 
 def out(obj):
-    sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    text = json.dumps(obj, ensure_ascii=False)
+    if len(text.encode("utf-8")) > LINE_BUDGET_BYTES:
+        text = shrink(obj)
+    sys.stdout.write(text + "\n")
     sys.stdout.flush()
 
 
