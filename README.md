@@ -9,6 +9,8 @@
 
 ## 安装（新机器）
 
+**拿到新机器先读 [SETUP.md](./SETUP.md)** —— 那份是给执行安装的 agent 的操作单，含前置检查、浏览器装法、路径配置和三条自检。下面是摘要：
+
 1. 装引擎包：`python -m pip install ruyijs`
 2. profile `package.json` 的 `dependencies` 加一条：
    ```json
@@ -76,12 +78,17 @@
 
 ## 截图配方（不开 UI、不建 profile）
 
-```powershell
-$exe = "$env:LOCALAPPDATA\ms-playwright\chromium_headless_shell-1228\chrome-headless-shell-win64\chrome-headless-shell.exe"
-& $exe --no-sandbox --disable-gpu --hide-scrollbars --window-size=1280,800 --screenshot=D:\out.png <URL>
+```js
+const { chromium } = require("playwright");
+const b = await chromium.launch({ channel: "chromium-headless-shell" });
+const p = await b.newPage();
+await p.goto(URL, { waitUntil: "domcontentloaded" });
+await p.screenshot({ path: OUT_PNG, fullPage: false });
+await b.close();
 ```
 
-headless shell 会自己退出，1~3 秒出图；`--window-size=W,H` 决定像素尺寸。
+用 channel 而不是拼 `ms-playwright` 下的版本目录，playwright 升级换 rev 也不用改。装法见 [SETUP.md](./SETUP.md) 第 3 步。
+
 图小于 8KB 基本是连接失败页，不是目标站内容——需要确认时看图，或用 playwright 拿状态码。
 
 **为什么不直接 `chrome.exe`**：本机上是"先写出图、然后挂着不退出"，同步等会卡死（实测 45 秒不退出且文件都没落地）。
@@ -93,7 +100,7 @@ headless shell 会自己退出，1~3 秒出图；`--window-size=W,H` 决定像�
 1. 静态页 / 接口 → `web_fetch`，不启浏览器
 2. JS 渲染 / 挑战 / 签名 / TLS 指纹 → 本插件
 3. 截图 / 点击 / 版面 / 下载 → chromium（截图用 headless shell，交互走 playwright）
-4. 既要过检测又要交互 → playwright firefox（未装，需要时 `playwright install firefox`）
+4. 既要过检测又要交互 → playwright firefox（`playwright install firefox`）
 
 **ruyijs 不做点击流**：没有排版引擎，元素位置和可视区判断不可信。
 
