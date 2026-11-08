@@ -6,6 +6,32 @@
 
 ## 0. 前置（先测，别假设）
 
+### 0.1 dsh 必须已经启动过一次
+
+profile 由 dsh 首次启动时生成，插件只能装进已存在的 profile：
+
+```powershell
+Test-Path "$env:USERPROFILE\.dsh\profiles\desktop\package.json"   # 必须 True
+```
+
+`False` 的三种情况：dsh 还没跑过 / 刚卸载重装还没启动 / profile 被删过。
+处理：正常启动一次 dsh 桌面版，**等主窗口出来再退出**，然后重测。
+
+**不要手动创建 profile 目录** —— dsh 启动时会用自带模板重写，手写的会被覆盖。
+
+profile 目录里应当有这 5 项，缺任何一项都说明 dsh 没正常初始化过：
+
+```
+%USERPROFILE%\.dsh\profiles\desktop\
+├── package.json
+├── cordis.yml
+├── cordis.patch.yml
+├── pnpm-lock.yaml
+└── node_modules
+```
+
+### 0.2 平台与运行时
+
 ```powershell
 [Environment]::Is64BitOperatingSystem          # 必须 True，ruyijs 只支持 Windows x64
 python -c "import sys; print(sys.version)"     # 3.10+
@@ -45,7 +71,18 @@ profile 的 `package.json`：
 "dsh": { "profile": { "bundles": [ ..., "dsh-tool-ruyijs" ] } }
 ```
 
-两条都要有。然后在该 profile 目录 `pnpm install`，重启宿主。
+两条都要有。然后在该 profile 目录跑 `pnpm install`，重启宿主。
+
+> **pnpm 用 dsh 自带的那个，别用全局的** —— 版本对不上会改写 lockfile。
+>
+> ```powershell
+> $pnpm = Get-ChildItem "$env:USERPROFILE\.dsh\dsh-runtimes" -Recurse -Filter "pnpm.cjs" -ErrorAction SilentlyContinue |
+>         Where-Object { $_.FullName -like "*dependencies\pnpm\bin\*" } | Select-Object -First 1
+> Set-Location "$env:USERPROFILE\.dsh\profiles\desktop"
+> node $pnpm.FullName install
+> ```
+>
+> 找不到就用 `npx pnpm@11 install`（版本见 `runtime/versions.json`）。
 
 验收：重启后插件列表里出现 `tool-ruyijs` 且 `enabled: true`、`fiberPhase: active`。
 

@@ -11,6 +11,7 @@
 
 **拿到新机器先读 [SETUP.md](./SETUP.md)** —— 那份是给执行安装的 agent 的操作单，含前置检查、浏览器装法、路径配置和三条自检。下面是摘要：
 
+0. **先让 dsh 正常启动一次**（主窗口出来再退出）。profile 目录 `%USERPROFILE%\.dsh\profiles\desktop` 由 dsh 首次启动时生成，里面有 `package.json`、`cordis.patch.yml`、`node_modules`；没这一步，下面第 2 步没文件可改。**别手动建 profile**，dsh 会用自带模板覆盖。
 1. 装引擎包：`python -m pip install ruyijs`
 2. profile `package.json` 的 `dependencies` 加一条：
    ```json
@@ -19,7 +20,7 @@
 3. 同一文件的 `dsh.profile.bundles` 末尾登记 `"dsh-tool-ruyijs"`
 4. 在 profile 目录跑一次 `pnpm install`，重启宿主
 
-想跟着本机改代码就改用本地链接：把第 2 步换成 `"dsh-tool-ruyijs": "link:C:/Users/zcb/.dsh/plugins/dsh-tool-ruyijs"`，第 3、4 步不变。
+想跟着本机改代码就改用本地链接：先把仓库 clone 到 `%USERPROFILE%\.dsh\plugins\dsh-tool-ruyijs`，再把第 2 步换成 `"dsh-tool-ruyijs": "link:C:/Users/<用户名>/.dsh/plugins/dsh-tool-ruyijs"`，第 3、4 步不变。
 
 ## 三个工具
 
